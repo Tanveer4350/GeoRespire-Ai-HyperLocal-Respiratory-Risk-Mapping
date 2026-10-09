@@ -1,103 +1,362 @@
 # 🌫️ Air Quality & Respiratory Risk Analysis
 
-An **ML-based environmental intelligence project** that analyzes the relationship between air pollution, weather conditions, air quality, and potential respiratory-health concerns.
+An **ML-based environmental intelligence project** that analyzes air pollution, weather conditions, air quality, and potential respiratory-health concerns.
 
-The project uses **PM2.5, PM10, temperature, humidity, AQI, and temporal/location information** to analyze pollution patterns and develop a foundation for air-quality forecasting and respiratory-health research.
+The project uses **PM2.5, PM10, temperature, humidity, AQI, time, and geographical information** to understand pollution patterns and establish a foundation for machine-learning-based air-quality forecasting and respiratory-health research.
 
-> ⚠️ **Research Disclaimer:** The respiratory-risk label used in the current dataset is a **non-clinical risk proxy derived from the available AQI index**. It does not represent a medical diagnosis or confirm that a respiratory illness occurred. Actual respiratory-health prediction requires validated clinical or epidemiological data.
+> ⚠️ **Research Disclaimer:** The respiratory-risk label in the current dataset is a **non-clinical risk proxy derived from the available AQI index**. It does not represent a medical diagnosis or confirm that a respiratory illness occurred.
 
 ---
 
-## 📌 Project Overview
+# 📌 1. Project Overview
 
-Air pollution is an important environmental factor associated with respiratory health. Fine particulate matter such as **PM2.5** can penetrate deep into the respiratory system, while PM10 represents larger inhalable particles.
+Air pollution is an important environmental factor associated with respiratory health. Fine particulate matter such as **PM2.5** can penetrate deep into the respiratory system, while **PM10** represents larger inhalable particles.
 
-This project combines air-quality and environmental variables to:
+This project combines environmental and air-quality variables to:
 
 - Analyze PM2.5 and PM10 pollution patterns
-- Study the influence of temperature and humidity
-- Analyze AQI variations
-- Classify observations into relative air-pollution respiratory-risk levels
-- Prepare data for machine-learning-based air-quality forecasting
-- Provide a foundation for future respiratory-health research
-- Enable geographical pollution visualization in future versions
+- Study relationships between weather and pollution
+- Analyze AQI variation
+- Identify relationships between environmental attributes
+- Develop ML models for air-quality prediction/forecasting
+- Classify observations according to relative pollution-related health concern
+- Prepare a foundation for future respiratory-health research
+- Enable geographical pollution visualization
 
 ---
 
-## 🎯 Objectives
+# 🎯 2. Objectives
 
 ### Primary Objectives
 
-1. Collect and organize environmental and air-quality data.
-2. Analyze **PM2.5 and PM10** concentrations.
-3. Study the relationship between weather conditions and pollution.
-4. Analyze AQI patterns across locations and time.
-5. Develop ML models for air-quality prediction/forecasting.
-6. Create a non-clinical respiratory-risk proxy for research exploration.
+1. Analyze PM2.5 and PM10 concentrations.
+2. Study the effect/relationship of temperature and humidity with particulate pollution.
+3. Analyze AQI patterns across time and locations.
+4. Identify correlations between environmental attributes.
+5. Develop ML models for pollution forecasting.
+6. Create a non-clinical respiratory-risk proxy for research experimentation.
+7. Build a foundation for integrating real respiratory-health data in the future.
 
-### Future Objective
+### Long-Term Objective
 
-Once validated respiratory-health datasets become available, the project can investigate:
+After obtaining validated health/epidemiological data:
 
-> **Air pollution exposure → respiratory-health outcomes**
-
-using actual aggregated health indicators such as respiratory OPD visits, hospital admissions, asthma-related cases, or other epidemiological measures.
-
----
-
-# 📊 Dataset
-
-The current dataset is derived from an Indian weather and air-quality dataset.
-
-### Core Features
-
-| Feature | Description |
-|---|---|
-| `timestamp` | Date and time of observation |
-| `location` | Observation location |
-| `region` | State/region |
-| `latitude` | Geographic latitude |
-| `longitude` | Geographic longitude |
-| `temperature_c` | Temperature in °C |
-| `humidity` | Relative humidity |
-| `pm2_5` | PM2.5 concentration |
-| `pm10` | PM10 concentration |
-| `aqi_us_epa_index` | AQI index provided by the source dataset |
-| `hour` | Hour extracted from timestamp |
-| `day` | Day of month |
-| `month` | Month |
-| `day_of_week` | Day of week |
-| `respiratory_risk_proxy` | Non-clinical relative risk category |
-| `risk_basis` | Explanation of the risk-label methodology |
-| `health_interpretation` | Interpretation of the proxy category |
-
-### Dataset Size
-
-**6,557 cleaned observations**
-
-### Risk Distribution
-
-| Risk Proxy | Observations |
-|---|---:|
-| Low | 4,349 |
-| Medium | 1,976 |
-| High | 232 |
+> **Investigate the association between air-pollution exposure and respiratory-health indicators.**
 
 ---
 
-# 🧠 Respiratory Risk Proxy
+# 📊 3. Dataset Information
+
+The current processed dataset contains:
+
+**6,557 observations**
+
+and includes environmental, pollution, temporal, geographical, and research-related attributes.
+
+---
+
+# 🧬 4. Data Attributes
+
+## Environmental & Pollution Attributes
+
+| Attribute | Data Type | Unit | Description | Role |
+|---|---|---|---|---|
+| `temperature_c` | Float | °C | Air temperature at the observation time | Environmental feature |
+| `humidity` | Float | % | Relative humidity | Environmental feature |
+| `pm2_5` | Float | µg/m³ | Fine particulate matter with aerodynamic diameter ≤ 2.5 µm | Primary pollution feature |
+| `pm10` | Float | µg/m³ | Particulate matter with aerodynamic diameter ≤ 10 µm | Pollution feature |
+| `aqi_us_epa_index` | Integer | Index | AQI index provided by the source dataset | Air-quality indicator |
+
+---
+
+## Geographic Attributes
+
+| Attribute | Data Type | Description | Role |
+|---|---|---|---|
+| `location` | String | City/location of observation | Location analysis |
+| `region` | String | State/region | Regional analysis |
+| `latitude` | Float | Geographic latitude | Mapping |
+| `longitude` | Float | Geographic longitude | Mapping |
+
+---
+
+## Temporal Attributes
+
+| Attribute | Data Type | Description |
+|---|---|---|
+| `timestamp` | DateTime | Date and time of observation |
+| `hour` | Integer | Hour extracted from timestamp |
+| `day` | Integer | Day of month |
+| `month` | Integer | Month |
+| `day_of_week` | Integer | Day of week |
+
+These variables are particularly useful for **time-series forecasting and seasonal analysis**.
+
+---
+
+## Research/Target Attribute
+
+| Attribute | Values | Description |
+|---|---|---|
+| `respiratory_risk_proxy` | Low / Medium / High | Non-clinical relative pollution-related respiratory-health concern |
+| `risk_basis` | Text | Method used to generate the proxy |
+| `health_interpretation` | Text | Human-readable interpretation |
+
+---
+
+# 📈 5. Dataset Statistical Summary
+
+The following statistics are calculated from the current **6,557 cleaned observations**.
+
+| Attribute | Min | Mean | Median | Max |
+|---|---:|---:|---:|---:|
+| Temperature (°C) | -2.60 | 25.46 | 25.90 | 35.30 |
+| Humidity (%) | 22.00 | 77.50 | 79.00 | 100.00 |
+| PM2.5 (µg/m³) | 0.50 | 40.57 | 25.40 | 410.90 |
+| PM10 (µg/m³) | 0.80 | 51.47 | 34.00 | 466.70 |
+| AQI Index | 1 | 2.21 | 2 | 6 |
+
+The large maximum values for PM2.5 and PM10 indicate the presence of **high-pollution observations**. These should be investigated as potential pollution events rather than automatically removed as errors.
+
+---
+
+# 🔗 6. Relationship Between Attributes
+
+A correlation analysis was performed on the major numerical variables.
+
+### Correlation Matrix
+
+| | Temperature | Humidity | PM2.5 | PM10 | AQI |
+|---|---:|---:|---:|---:|---:|
+| **Temperature** | 1.000 | -0.368 | 0.208 | 0.253 | 0.211 |
+| **Humidity** | -0.368 | 1.000 | -0.113 | -0.213 | -0.137 |
+| **PM2.5** | 0.208 | -0.113 | 1.000 | **0.971** | **0.908** |
+| **PM10** | 0.253 | -0.213 | **0.971** | 1.000 | **0.887** |
+| **AQI** | 0.211 | -0.137 | **0.908** | **0.887** | 1.000 |
+
+> **Note:** Correlation measures statistical association, not causation.
+
+---
+
+# 🧠 7. Interpretation of Relationships
+
+## PM2.5 ↔ PM10
+
+**Correlation: 0.971 — Very Strong Positive Relationship**
+
+This is the strongest relationship in the dataset.
+
+When PM2.5 increases, PM10 generally increases as well.
+
+```text
+PM2.5 ↑
+   │
+   └────────► PM10 ↑
+```
+
+This is expected because both represent particulate pollution and can increase during the same pollution events.
+
+### ML implication
+
+PM2.5 and PM10 contain highly related information.
+
+This should be considered when selecting features because using both may introduce **multicollinearity** in some models.
+
+---
+
+# PM2.5 ↔ AQI
+
+**Correlation: 0.908 — Strong Positive Relationship**
+
+Higher PM2.5 values are strongly associated with higher AQI index values in this dataset.
+
+```text
+PM2.5 ↑
+   │
+   └────────► AQI ↑
+```
+
+This makes PM2.5 one of the most important pollution variables for predicting air-quality conditions.
+
+---
+
+# PM10 ↔ AQI
+
+**Correlation: 0.887 — Strong Positive Relationship**
+
+PM10 also shows a strong positive relationship with AQI.
+
+```text
+PM10 ↑
+   │
+   └────────► AQI ↑
+```
+
+This indicates that particulate pollution is strongly represented in the AQI variation within the dataset.
+
+---
+
+# Temperature ↔ PM2.5
+
+**Correlation: 0.208 — Weak Positive Relationship**
+
+The dataset shows a relatively weak positive association between temperature and PM2.5.
+
+```text
+Temperature ↑
+      │
+      └──────► PM2.5 slightly ↑
+```
+
+However, this relationship is not strong enough to conclude that increasing temperature directly causes higher PM2.5.
+
+Other factors such as:
+
+- wind
+- atmospheric stability
+- rainfall
+- emissions
+- season
+- location
+
+can influence particulate concentrations.
+
+---
+
+# Temperature ↔ PM10
+
+**Correlation: 0.253 — Weak Positive Relationship**
+
+Temperature has a weak positive relationship with PM10.
+
+This suggests that temperature alone is not a strong predictor of particulate concentration.
+
+For ML forecasting, temperature should therefore be considered alongside other variables rather than used independently.
+
+---
+
+# Temperature ↔ Humidity
+
+**Correlation: -0.368 — Moderate Negative Relationship**
+
+Higher temperatures in this dataset tend to occur with lower humidity.
+
+```text
+Temperature ↑
+      │
+      └────────► Humidity ↓
+```
+
+This is an environmental relationship rather than evidence that temperature directly controls humidity.
+
+---
+
+# Humidity ↔ PM2.5
+
+**Correlation: -0.113 — Very Weak Negative Relationship**
+
+The relationship between humidity and PM2.5 is weak in this dataset.
+
+```text
+Humidity ↑
+    │
+    └──────► PM2.5 slightly ↓
+```
+
+Therefore, humidity by itself is unlikely to be a strong predictor of PM2.5.
+
+However, humidity can still be useful as a feature because atmospheric conditions can influence pollutant behavior.
+
+---
+
+# Humidity ↔ PM10
+
+**Correlation: -0.213 — Weak Negative Relationship**
+
+The dataset shows a weak negative association between humidity and PM10.
+
+This suggests that humidity has some relationship with particulate levels, but it is considerably weaker than the PM2.5–PM10 relationship.
+
+---
+
+# Humidity ↔ AQI
+
+**Correlation: -0.137 — Very Weak Negative Relationship**
+
+Humidity has a relatively weak direct correlation with AQI in this dataset.
+
+Therefore:
+
+> Humidity should be treated as a contextual/weather feature rather than the primary determinant of air quality.
+
+---
+
+# 📊 8. Relationship Strength Summary
+
+| Relationship | Correlation | Strength |
+|---|---:|---|
+| PM2.5 ↔ PM10 | **0.971** | Very Strong |
+| PM2.5 ↔ AQI | **0.908** | Strong |
+| PM10 ↔ AQI | **0.887** | Strong |
+| Temperature ↔ Humidity | **-0.368** | Moderate |
+| Temperature ↔ PM10 | 0.253 | Weak |
+| Temperature ↔ PM2.5 | 0.208 | Weak |
+| Humidity ↔ PM10 | -0.213 | Weak |
+| Humidity ↔ AQI | -0.137 | Very Weak |
+| Humidity ↔ PM2.5 | -0.113 | Very Weak |
+
+---
+
+# ⚠️ 9. Important Interpretation
+
+The correlation analysis tells us:
+
+### Strong relationships
+
+```text
+PM2.5 ─────────► PM10
+  │                 │
+  │                 │
+  └──────► AQI ◄────┘
+```
+
+The pollution variables are strongly connected to AQI.
+
+### Weather relationships
+
+```text
+Temperature ───► weak relationship ─── PM2.5
+      │
+      └────────► weak relationship ─── PM10
+
+Humidity ──────► weak relationship ─── pollution
+```
+
+Therefore, the project should treat **PM2.5 and PM10 as primary pollution features**, while temperature and humidity provide additional environmental context.
+
+---
+
+# 🫁 10. Respiratory Risk Proxy
 
 The current dataset does **not contain actual patient-level respiratory-health outcomes**.
 
-Therefore, a medical diagnosis label was intentionally not created.
+Therefore, the project does not claim that a respiratory illness occurred for a particular observation.
 
-Instead, the project uses the source dataset's AQI index to create a **relative air-pollution respiratory-health concern proxy**:
+Instead, a **relative air-pollution respiratory-health concern proxy** is generated from the source AQI index.
 
 | AQI Index | Risk Proxy |
 |---:|---|
 | 1–2 | Low |
 | 3–4 | Medium |
 | 5–6 | High |
+
+### Current Distribution
+
+| Risk | Observations |
+|---|---:|
+| Low | 4,349 |
+| Medium | 1,976 |
+| High | 232 |
 
 ### Interpretation
 
@@ -113,78 +372,162 @@ Elevated relative air-pollution health concern.
 
 Higher relative air-pollution health concern.
 
-This classification is intended for **environmental analysis and ML experimentation**, not clinical decision-making.
+> This is an environmental research proxy and **not a medical diagnosis**.
 
 ---
 
-# 🤖 Machine Learning Pipeline
+# 🚨 11. Target Leakage Consideration
 
-The planned ML pipeline is:
+The respiratory-risk proxy is derived from the AQI index.
+
+Therefore, it should **not** be treated as an independently observed medical outcome.
+
+For example, training:
 
 ```text
-                 Environmental Data
-                        │
-        ┌───────────────┼───────────────┐
-        ▼               ▼               ▼
-      PM2.5           PM10          Weather Data
-                                    │
-                              Temperature
-                              Humidity
-                        │
-                        ▼
-                Data Preprocessing
-                        │
-              ┌─────────┴─────────┐
-              ▼                   ▼
-        Feature Engineering   EDA
-              │                   │
-              └─────────┬─────────┘
-                        ▼
-                 ML Model Training
-                        │
-              ┌─────────┴─────────┐
-              ▼                   ▼
-       Pollution Forecasting   Risk Analysis
-              │                   │
-              └─────────┬─────────┘
-                        ▼
+PM2.5
+PM10
+Temperature
+Humidity
+       ↓
+Respiratory Risk
+```
+
+and claiming that the model predicts whether a person develops respiratory disease would be scientifically inappropriate.
+
+The current risk proxy is primarily useful for:
+
+- exploratory analysis
+- visualization
+- environmental-risk categorization
+- prototype dashboard development
+
+For actual respiratory-health ML, the project needs independent health data.
+
+---
+
+# 🧪 12. Future Health Dataset
+
+A stronger research dataset could contain:
+
+| Attribute | Description |
+|---|---|
+| Date | Health observation date |
+| Location | City/region |
+| PM2.5 | Pollution exposure |
+| PM10 | Pollution exposure |
+| Temperature | Weather |
+| Humidity | Weather |
+| AQI | Air quality |
+| Respiratory OPD visits | Aggregated health indicator |
+| Hospital admissions | Aggregated health indicator |
+| Asthma cases | Aggregated health indicator |
+| COPD cases | Aggregated health indicator |
+| Respiratory infection cases | Aggregated health indicator |
+
+The research pipeline could then become:
+
+```text
+Air Quality
+     +
+Weather
+     +
+Location
+     +
+Time
+     ↓
+Respiratory Health Indicators
+     ↓
+Statistical Analysis
+     ↓
+ML / Risk Modeling
+```
+
+This would allow the project to study actual **associations between pollution exposure and respiratory-health indicators**.
+
+---
+
+# 🤖 13. Machine Learning Pipeline
+
+```text
+                Raw Dataset
+                     │
+                     ▼
+             Data Quality Check
+                     │
+                     ▼
+              Data Preprocessing
+                     │
+                     ▼
+             Feature Engineering
+                     │
+          ┌──────────┴──────────┐
+          ▼                     ▼
+     Exploratory Data       ML Modeling
+        Analysis                 │
+          │              ┌──────┴──────┐
+          │              ▼             ▼
+          │          Regression   Classification
+          │              │             │
+          │              ▼             ▼
+          │          Pollution      AQI/Risk
+          │          Forecasting    Analysis
+          │
+          └──────────────┬──────────────┘
+                         ▼
                   Visualization
-                        │
-                        ▼
-              Research & Insights
+                         │
+                         ▼
+                Research Insights
 ```
 
 ---
 
-# 🔬 Planned ML Tasks
+# 🎯 14. Recommended ML Tasks
 
-## 1. Air Quality Analysis
+## Task 1 — Pollution Forecasting
 
-Analyze:
+Predict future:
 
-- PM2.5 trends
-- PM10 trends
-- AQI distribution
-- Temperature-pollution relationship
-- Humidity-pollution relationship
-- Location-wise pollution patterns
-- Seasonal patterns
+- PM2.5
+- PM10
+
+using:
+
+- historical pollution
+- temperature
+- humidity
+- time
+- location
+
+Possible models:
+
+- Linear Regression
+- Random Forest
+- Gradient Boosting
+- XGBoost
+- LSTM
 
 ---
 
-## 2. AQI Classification
+## Task 2 — AQI Forecasting
 
-The project can classify observations into AQI categories using environmental features.
+Use predicted pollution concentrations and historical environmental conditions to estimate future air-quality conditions.
 
-Potential models:
+---
+
+## Task 3 — AQI Classification
+
+Classify air-quality conditions into appropriate categories.
+
+Models:
 
 - Logistic Regression
 - Decision Tree
 - Random Forest
 - XGBoost
-- Gradient Boosting
 
-Evaluation metrics:
+Metrics:
 
 - Accuracy
 - Precision
@@ -194,239 +537,107 @@ Evaluation metrics:
 
 ---
 
-## 3. Pollution Forecasting
+# 🧹 15. Data Cleaning & Validation
 
-A more meaningful ML objective is to predict **future pollution levels** rather than simply reconstructing AQI.
+Before ML training, the following checks should be performed:
 
-Example:
-
-```text
-Historical PM2.5
-Historical PM10
-Temperature
-Humidity
-Time
-Location
-       ↓
-   ML Model
-       ↓
-Future PM2.5
-Future PM10
-       ↓
-Future AQI / Air Quality
-```
-
-Potential models:
-
-- Linear Regression
-- Random Forest
-- Gradient Boosting
-- XGBoost
-- LSTM
-
-Regression metrics:
-
-- MAE
-- RMSE
-- R²
-
----
-
-# 📈 Exploratory Data Analysis
-
-The project will investigate relationships such as:
-
-### PM2.5 vs AQI
-
-```text
-PM2.5 ───────────────► AQI
-```
-
-### PM10 vs AQI
-
-```text
-PM10 ────────────────► AQI
-```
-
-### Temperature vs PM2.5
-
-```text
-Temperature ─────────► PM2.5
-```
-
-### Humidity vs PM2.5
-
-```text
-Humidity ────────────► PM2.5
-```
-
-### Seasonal patterns
-
-```text
-Month
-  │
-  ├── PM2.5
-  ├── PM10
-  └── AQI
-```
-
-Correlation analysis and feature-importance techniques will be used to determine which variables contribute most to model predictions.
-
----
-
-# 🗺️ Future Geographic Mapping
-
-Because the dataset contains:
-
-- Latitude
-- Longitude
-- Location
-- Region
-
-the project can later provide a geographical visualization.
-
-Example:
-
-```text
-                 INDIA
-        ┌────────────────────┐
-        │                    │
-        │  🟢 Low            │
-        │       🟡 Medium    │
-        │                    │
-        │             🔴 High│
-        │                    │
-        └────────────────────┘
-```
-
-Future versions can integrate:
-
-- Leaflet
-- Mapbox
-- GeoPandas
-- Folium
-
-to create an interactive pollution map.
-
----
-
-# 🫁 Respiratory Health Research
-
-The long-term research direction is to combine environmental data with **real aggregated respiratory-health data**.
-
-Potential future health variables:
-
-```text
-Date
-Location
-Respiratory OPD Visits
-Hospital Admissions
-Asthma Cases
-COPD Cases
-Respiratory Infection Cases
-```
-
-The combined dataset could look like:
-
-```text
-Date
-Location
-PM2.5
-PM10
-Temperature
-Humidity
-AQI
-Respiratory Cases
-```
-
-The project could then investigate:
-
-```text
-Air Pollution
-     +
-Weather
-     ↓
-Respiratory Health Indicators
-     ↓
-Statistical Analysis
-     ↓
-Association / Risk Modeling
-```
+- Missing-value detection
+- Duplicate detection
+- Data-type validation
+- Timestamp validation
+- Negative PM2.5 detection
+- Negative PM10 detection
+- Humidity range validation
+- Temperature anomaly investigation
+- AQI-value validation
+- PM2.5/PM10 consistency checks
+- Outlier investigation
+- Coordinate validation
+- Location validation
+- Chronological ordering
+- Time-gap analysis
+- Risk-label validation
+- Target-leakage analysis
 
 ### Important
 
-The project will distinguish between:
+Outliers should **not automatically be removed**.
 
-**Association**
-
-> Higher pollution levels are associated with higher respiratory-health indicators.
-
-and
-
-**Causation**
-
-> Pollution directly caused a specific respiratory illness.
-
-The latter requires substantially stronger epidemiological evidence and appropriate study design.
+For example, an extremely high PM2.5 value could represent a genuine severe pollution event and may be valuable for forecasting.
 
 ---
 
-# 🧪 Research Methodology
+# 🗺️ 16. Geographic Analysis
 
-The research workflow will follow:
+The dataset contains:
 
-### Phase 1 — Data Collection
+```text
+latitude
+longitude
+location
+region
+```
 
-Collect environmental and air-quality observations.
+These allow future development of an interactive pollution map.
 
-### Phase 2 — Data Cleaning
+Possible visualization:
 
-- Handle missing values
-- Remove duplicates
-- Detect outliers
-- Normalize/transform variables where required
-- Validate timestamps
+```text
+                    INDIA
+        ┌────────────────────────┐
+        │                        │
+        │     🟢 Low             │
+        │             🟡 Medium  │
+        │                        │
+        │                 🔴 High│
+        │                        │
+        └────────────────────────┘
+```
 
-### Phase 3 — Exploratory Analysis
+Future technologies:
 
-Study:
-
-- Distributions
-- Correlations
-- Seasonal variation
-- Location-wise patterns
-
-### Phase 4 — Feature Engineering
-
-Create:
-
-- Hour
-- Day
-- Month
-- Day of week
-- Lag features
-- Rolling averages
-- Previous pollution levels
-
-### Phase 5 — ML Modeling
-
-Train and compare multiple models.
-
-### Phase 6 — Evaluation
-
-Use appropriate classification or regression metrics.
-
-### Phase 7 — Health Research
-
-After obtaining validated health data, investigate associations between pollution exposure and respiratory-health indicators.
-
-### Phase 8 — Visualization
-
-Present results through an interactive dashboard and geographical map.
+- Folium
+- GeoPandas
+- Leaflet
+- Mapbox
 
 ---
 
-# 🛠️ Technology Stack
+# 📈 17. Exploratory Data Analysis
+
+The EDA phase should include:
+
+### Distribution Analysis
+
+- PM2.5 distribution
+- PM10 distribution
+- Temperature distribution
+- Humidity distribution
+- AQI distribution
+
+### Correlation Analysis
+
+- Correlation matrix
+- Scatter plots
+- Pollution-weather relationships
+
+### Temporal Analysis
+
+- Hourly patterns
+- Daily patterns
+- Monthly patterns
+- Seasonal patterns
+
+### Geographic Analysis
+
+- Location-wise PM2.5
+- Location-wise PM10
+- Region-wise AQI
+- Geographic pollution hotspots
+
+---
+
+# 🛠️ 18. Technology Stack
 
 ### Programming
 
@@ -441,7 +652,7 @@ Present results through an interactive dashboard and geographical map.
 
 - Scikit-learn
 - XGBoost
-- TensorFlow/PyTorch *(optional for deep learning)*
+- TensorFlow/PyTorch *(optional)*
 
 ### Visualization
 
@@ -461,12 +672,12 @@ Present results through an interactive dashboard and geographical map.
 
 ### Database
 
-- PostgreSQL *(future version)*
-- SQLite *(prototype)*
+- PostgreSQL
+- SQLite
 
 ---
 
-# 📁 Project Structure
+# 📁 19. Project Structure
 
 ```text
 air-quality-respiratory-analysis/
@@ -505,148 +716,148 @@ air-quality-respiratory-analysis/
 
 ---
 
-# 🚀 Installation
+# 📚 20. Research References
 
-Clone the repository:
+The project methodology is informed by established air-quality and public-health research.
 
-```bash
-git clone <repository-url>
-cd air-quality-respiratory-analysis
-```
+### World Health Organization — Global Air Quality Guidelines
 
-Create a virtual environment:
+WHO provides evidence-based air-quality guideline levels for pollutants including PM2.5 and PM10 and documents their health relevance.
 
-```bash
-python -m venv venv
-```
+https://www.who.int/publications/i/item/9789240034228
 
-Activate it on Windows:
+### US Environmental Protection Agency — Particulate Matter
 
-```bash
-venv\Scripts\activate
-```
+The US EPA summarizes evidence linking particulate-matter exposure with respiratory and cardiovascular health effects.
 
-Install dependencies:
+https://www.epa.gov/pm-pollution/health-and-environmental-effects-particulate-matter-pm
 
-```bash
-pip install -r requirements.txt
-```
+### Central Pollution Control Board — National Air Quality Index
 
-Run the Streamlit dashboard:
+CPCB provides India's National Air Quality Index methodology and associated AQI categories/health implications.
 
-```bash
-streamlit run dashboard/app.py
-```
+https://cpcb.nic.in/displaypdf.php?id=bWFudWFsLW1vbml0b3JpbmcvQVFJX05BTVBfUmVwX1NlcHRlbWJlcjIwMTYucGRm
 
----
+### Indian Air Pollution & Respiratory Health Research
 
-# 📊 Expected Outputs
+Peer-reviewed systematic-review evidence has investigated associations between ambient air pollution and respiratory illnesses in India.
 
-The completed system should provide:
+https://pubmed.ncbi.nlm.nih.gov/31070475/
 
-- PM2.5 analysis
-- PM10 analysis
-- AQI analysis
-- Temperature and humidity analysis
-- Pollution forecasting
-- Model performance comparison
-- Feature importance
-- Risk-proxy classification
-- Location-wise pollution visualization
-- Time-series pollution trends
-- Research-oriented respiratory-health analysis
+### Temperature, Air Pollution & Respiratory Health
+
+Research has examined how temperature can modify associations between air pollution and respiratory outcomes.
+
+https://pubmed.ncbi.nlm.nih.gov/34914983/
+
+### WHO AirQ+
+
+WHO's AirQ+ framework provides a methodology for assessing health effects associated with short- and long-term exposure to air pollution.
+
+https://www.who.int/tools/airq
 
 ---
 
-# ⚠️ Limitations
+# ⚠️ 21. Limitations
 
-1. The current dataset does **not contain actual respiratory patient outcomes**.
-2. The respiratory-risk field is a **non-clinical proxy**, not a diagnosis.
-3. AQI in the current source dataset is a **US EPA index**, so it should not automatically be interpreted as CPCB/Indian AQI.
+1. The current dataset does not contain actual patient-level respiratory-health outcomes.
+2. The respiratory-risk field is a non-clinical proxy.
+3. The current AQI field represents a **US EPA AQI index** from the source dataset and should not automatically be treated as India's CPCB AQI.
 4. Correlation does not establish causation.
-5. Weather conditions can influence pollution dispersion and health outcomes in complex ways.
-6. Actual respiratory-health modeling requires validated epidemiological/clinical data.
-7. Patient-level health information should only be used with appropriate ethical, privacy, and institutional approval.
+5. Weather-pollution relationships are affected by many variables not currently included.
+6. PM2.5 and PM10 are highly correlated and require consideration during feature selection.
+7. Real respiratory-health modeling requires validated epidemiological/clinical data.
+8. Patient-level health information requires appropriate privacy, ethical, and institutional safeguards.
 
 ---
 
-# 🔮 Future Scope
+# 🔮 22. Future Scope
 
-### 1. Real Respiratory Health Data
+### Phase 1 — Current
 
-Integrate aggregated hospital or public-health data to replace the current proxy.
+**Environmental Data Analysis**
 
-### 2. Advanced Forecasting
+```text
+PM2.5
+PM10
+Temperature
+Humidity
+AQI
+```
 
-Implement:
+↓
 
-- XGBoost
-- LSTM
-- Temporal Fusion Transformer
-
-for multi-step pollution forecasting.
-
-### 3. Real-Time Monitoring
-
-Integrate live air-quality APIs/sensors.
-
-### 4. Interactive Pollution Map
-
-Display real-time and predicted pollution levels geographically.
-
-### 5. Health-Risk Modeling
-
-After obtaining validated health data, investigate relationships between pollution exposure and respiratory-health outcomes.
-
-### 6. Personalized Exposure Alerts
-
-A future system could provide general environmental alerts such as:
-
-> "Air quality is currently poor. Consider reducing prolonged outdoor exposure."
-
-Such features would be designed as **general environmental guidance**, not individual medical advice.
+EDA + correlation + data-quality analysis
 
 ---
 
-# 📚 Research References
+### Phase 2
 
-The scientific basis for the project includes:
+**Machine Learning**
 
-- **World Health Organization (WHO)** — Global Air Quality Guidelines and particulate-matter health evidence.
-- **US Environmental Protection Agency (EPA)** — Health and environmental effects of particulate matter.
-- **Central Pollution Control Board (CPCB), India** — National Air Quality Index methodology and health-related AQI categories.
-- **Indian systematic-review literature** on ambient air pollution and respiratory health.
-- Peer-reviewed studies examining the interaction of particulate pollution, temperature, humidity and respiratory outcomes.
-
----
-
-# 👥 Research Positioning
-
-This project is positioned as an:
-
-> **Environmental Machine Learning + Public Health Research project**
-
-rather than a medical diagnostic system.
-
-The core research question is:
-
-> **"How can machine learning use air-quality and environmental data to forecast pollution patterns and investigate their association with respiratory-health indicators?"**
+```text
+Historical Environmental Data
+             ↓
+       ML Forecasting
+             ↓
+Future PM2.5 / PM10 / AQI
+```
 
 ---
 
-# 📜 Disclaimer
+### Phase 3
 
-This project is intended for **educational, research, and environmental-analysis purposes only**.
+**Interactive Dashboard**
 
-The respiratory-risk proxy does not diagnose asthma, COPD, respiratory infections, or any other medical condition. The project should not be used to make individual medical decisions.
-
-Any future health-risk model should be developed using validated health datasets and reviewed with appropriate domain experts.
+```text
+Current AQI
+PM2.5
+PM10
+Temperature
+Humidity
+Forecast
+Risk Indicator
+```
 
 ---
 
-## ⭐ Project Vision
+### Phase 4
 
-The long-term goal is to develop an intelligent environmental monitoring system that connects:
+**Geographical Intelligence**
+
+```text
+Location
+   ↓
+Pollution Level
+   ↓
+Map Visualization
+   ↓
+Pollution Hotspots
+```
+
+---
+
+### Phase 5
+
+**Respiratory Health Research**
+
+```text
+Environmental Data
+        +
+Validated Health Data
+        ↓
+Statistical Analysis
+        ↓
+Association Analysis
+        ↓
+Health-Risk Research
+```
+
+---
+
+# 🌍 23. Project Vision
+
+The long-term goal is to develop an intelligent environmental-health analysis platform connecting:
 
 ```text
 🌫️ Air Pollution
@@ -655,6 +866,8 @@ The long-term goal is to develop an intelligent environmental monitoring system 
        +
 📍 Location
        +
+⏱️ Time
+       +
 🤖 Machine Learning
        +
 🫁 Public Health Research
@@ -662,4 +875,18 @@ The long-term goal is to develop an intelligent environmental monitoring system 
 Environmental Health Intelligence
 ```
 
-**From measuring pollution → to forecasting pollution → to understanding its potential relationship with respiratory health.**
+The project progresses from:
+
+**Measuring pollution → Understanding pollution → Forecasting pollution → Mapping pollution → Researching its relationship with respiratory health.**
+
+---
+
+# 📜 24. Disclaimer
+
+This project is intended for **educational, research, and environmental-analysis purposes only**.
+
+The current respiratory-risk proxy does not diagnose asthma, COPD, respiratory infections, or any other medical condition.
+
+It should not be used for individual medical decisions.
+
+Any future health-risk model should use validated health data and involve appropriate environmental-health, medical, and epidemiological expertise.
