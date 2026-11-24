@@ -10,8 +10,8 @@ GeoRespire is an interactive environmental research dashboard for exploring air-
 - Marker popups and map circles with PM2.5, PM10, AQI, region, and timestamp details
 - Dataset summaries for monitored locations, PM2.5, and average AQI
 - Place prediction using nearby 2023 observations, distance, hour, and month
-- Browser-geolocation prediction using live air-quality and weather APIs
-- Optional WAQI monitoring-station readings when an API token is configured
+- Browser-geolocation AQI estimate using current weather matched to historical observations
+- Detailed prediction cards and on-demand current-weather estimates for other monitored locations
 - Automatic Mapbox-to-OpenStreetMap fallback for map tiles
 - Responsive desktop and mobile layout
 
@@ -22,9 +22,8 @@ GeoRespire is an interactive environmental research dashboard for exploring air-
 - Leaflet 1.9
 - OpenStreetMap tiles
 - Mapbox tiles, when `VITE_MAPBOX_TOKEN` is configured
-- Open-Meteo air-quality and weather APIs
+- Open-Meteo weather API for current temperature and humidity
 - OpenStreetMap Nominatim for place geocoding
-- Optional World Air Quality Index (WAQI) station API
 - Pandas for the included data-quality notebook
 
 ## Getting Started
@@ -58,15 +57,13 @@ The app works without environment variables. Optional services can be enabled by
 
 ```dotenv
 VITE_MAPBOX_TOKEN=your_mapbox_public_token
-VITE_AQICN_TOKEN=your_waqi_api_token
 ```
 
 | Variable | Purpose |
 |---|---|
 | `VITE_MAPBOX_TOKEN` | Uses Mapbox Light tiles; falls back to OpenStreetMap if tiles fail |
-| `VITE_AQICN_TOKEN` | Requests the nearest WAQI monitoring station for geolocation predictions |
 
-Use only public Mapbox tokens in `VITE_*` variables. Both variables are exposed to browser-side code.
+Use only public Mapbox tokens in `VITE_*` variables. They are exposed to browser-side code.
 
 ## Data
 
@@ -142,15 +139,9 @@ Place estimates are historical extrapolations, not current measurements.
 
 ### Live location estimate
 
-For live geolocation, the dashboard retrieves:
+For geolocation or a selected monitored location, the dashboard retrieves current temperature and humidity from Open-Meteo, then matches them with the current hour, month, and location against the 2023 observations. It uses the 31 closest historical matches, weighted by similarity, to estimate the AQI category index, PM2.5, and PM10. Other monitored locations are queried on demand to avoid making hundreds of weather API requests at once.
 
-- PM2.5 and PM10 from an optional nearest WAQI station or Open-Meteo
-- US AQI from the station or Open-Meteo
-- Temperature and humidity from Open-Meteo
-
-The live values are normalized and compared with 31 nearest observations in feature space. Neighbors vote by inverse distance, and the highest weighted risk class is returned.
-
-Live retrieval can refresh every 15 minutes after the first geolocation request.
+The prediction card shows the estimate, risk proxy, particulate estimates, weather inputs, matching method, and update time. This is a historical weather-based estimate, not a live air-quality measurement. The source dataset stores AQI categories from 1 to 6, not exact numeric AQI readings, so the estimate does not provide an exact current AQI value. The geolocation estimate refreshes every 15 minutes after the first location request.
 
 ## Project Structure
 

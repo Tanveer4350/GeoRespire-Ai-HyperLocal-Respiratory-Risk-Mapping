@@ -45,8 +45,8 @@ app.innerHTML = `
             <button class="risk-option" data-risk="Low"><span class="risk-swatch low"></span>Low <b>—</b></button>
           </div>
           <div class="live-panel">
-            <button id="live-location" class="live-button" type="button"><span class="live-target"></span>Use my live location</button>
-            <p id="live-status" class="live-status">Request location for a real-time prediction</p>
+            <button id="live-location" class="live-button" type="button"><span class="live-target"></span>Predict at my location</button>
+            <p id="live-status" class="live-status">Estimate AQI from current weather and historical observations</p>
           </div>
           <div class="sidebar-foot"><span class="info-icon">i</span><p>This dashboard uses a research proxy based primarily on the source dataset's AQI index. It is not a medical diagnosis.</p></div>
         </aside>
@@ -59,9 +59,41 @@ app.innerHTML = `
 
       <section class="metrics">
         <div class="metric"><span class="metric-label">Locations monitored</span><strong id="locations-value">—</strong><span class="metric-detail">distinct observation sites</span></div>
-        <div class="metric"><span class="metric-label">Live PM2.5</span><strong id="pm25-value">—</strong><span class="metric-detail" id="pm25-detail">µg/m³ at your location</span></div>
+        <div class="metric"><span class="metric-label">PM2.5 estimate</span><strong id="pm25-value">—</strong><span class="metric-detail" id="pm25-detail">µg/m³ at your location</span></div>
         <div class="metric"><span class="metric-label" id="aqi-label">Average AQI index</span><strong id="aqi-value">—</strong><span class="metric-detail" id="aqi-detail">US EPA source index</span></div>
         <div class="metric metric-accent"><span class="metric-label">Selected location</span><strong id="selected-value">Overview</strong><span class="metric-detail" id="selected-detail">Click a marker to inspect</span></div>
+      </section>
+
+      <section class="prediction-details" aria-live="polite">
+        <div class="prediction-details-head">
+          <div>
+            <p class="eyebrow">Prediction details / 03</p>
+            <h2 id="prediction-location">Waiting for a prediction</h2>
+            <p class="prediction-summary" id="prediction-summary">Use your location or choose a monitored city to estimate current conditions from weather and historical observations.</p>
+          </div>
+          <div class="other-location">
+            <label class="field-label" for="other-location-select">Check another monitored location</label>
+            <div class="other-location-controls">
+              <select id="other-location-select" disabled>
+                <option value="">Loading locations...</option>
+              </select>
+              <button id="check-other-location" class="live-button" type="button" disabled>Check current</button>
+            </div>
+            <p class="live-status" id="other-location-status">Choose a city to get its current weather-based estimate.</p>
+          </div>
+        </div>
+        <div class="prediction-facts">
+          <div class="prediction-fact"><span>Estimated AQI category</span><strong id="detail-aqi">—</strong><small id="detail-aqi-band">Category index 1–6</small></div>
+          <div class="prediction-fact"><span>Risk proxy</span><strong id="detail-risk">—</strong><small>Non-clinical, AQI-derived label</small></div>
+          <div class="prediction-fact"><span>Estimated PM2.5</span><strong id="detail-pm25">—</strong><small>µg/m³</small></div>
+          <div class="prediction-fact"><span>Estimated PM10</span><strong id="detail-pm10">—</strong><small>µg/m³</small></div>
+          <div class="prediction-fact"><span>Temperature used</span><strong id="detail-temperature">—</strong><small>Current or historical match</small></div>
+          <div class="prediction-fact"><span>Humidity used</span><strong id="detail-humidity">—</strong><small>Current or historical match</small></div>
+        </div>
+        <div class="prediction-explanation">
+          <p id="prediction-method">The estimate will show its inputs and historical matching method here.</p>
+          <span id="prediction-updated">No prediction yet</span>
+        </div>
       </section>
 
       <section class="insight-card">
@@ -106,6 +138,7 @@ let allRows = [];
 let activeRisk = 'all';
 let activeLocation = 'all';
 let searchTerm = '';
+const monitoredLocations = new Map();
 
 function parseCsv(text) {
   const lines = text.trim().split(/\r?\n/);
@@ -220,103 +253,118 @@ let liveMarker = null;
 let liveRefreshTimer = null;
 let activeLivePosition = null;
 
-function usAqiCategory(aqi) {
-  if (aqi <= 50) return 1;
-  if (aqi <= 100) return 2;
-  if (aqi <= 150) return 3;
-  if (aqi <= 200) return 4;
-  if (aqi <= 300) return 5;
-  return 6;
+function riskFromAqiIndex(aqiIndex) {
+  const category = Math.max(1, Math.min(6, Math.round(aqiIndex)));
+  return category <= 2 ? 'Low' : category <= 4 ? 'Medium' : 'High';
 }
 
-function predictLiveRisk(features) {
-  const featureNames = ['pm2_5', 'pm10', 'temperature_c', 'humidity', 'aqi_us_epa_index', 'hour', 'month'];
-  const ranges = {};
-  featureNames.forEach((name) => {
-    const values = allRows.map((row) => Number(row[name])).filter(Number.isFinite);
-    ranges[name] = {
-      min: Math.min(...values),
-      max: Math.max(...values)
-    };
-  });
+function predictCurrentAqi(features) {
+  const historicalRows = allRows.filter((row) =>
+    Number.isFinite(row.latitude) && Number.isFinite(row.longitude)
+    && Number.isFinite(row.temperature_c) && Number.isFinite(row.humidity)
+    && Number.isFinite(row.aqi_us_epa_index) && Number.isFinite(row.pm2_5) && Number.isFinite(row.pm10)
+  );
+  if (!historicalRows.length) throw new Error('Historical observations are unavailable');
 
-  const neighbors = allRows.map((row) => {
-    let squaredDistance = 0;
-    featureNames.forEach((name) => {
-      const range = ranges[name].max - ranges[name].min || 1;
-      const current = (features[name] - ranges[name].min) / range;
-      const historic = (Number(row[name]) - ranges[name].min) / range;
-      squaredDistance += (current - historic) ** 2;
-    });
-    return { risk: row.respiratory_risk_proxy, distance: Math.sqrt(squaredDistance) };
-  }).sort((left, right) => left.distance - right.distance).slice(0, 31);
+  const range = (key) => {
+    const values = historicalRows.map((row) => row[key]);
+    return Math.max(...values) - Math.min(...values) || 1;
+  };
+  const temperatureRange = range('temperature_c');
+  const humidityRange = range('humidity');
+  const neighbors = historicalRows.map((row) => {
+    const hourDifference = Math.abs(row.hour - features.hour);
+    const monthDifference = Math.abs(row.month - features.month);
+    const score = haversineKm(features, row) / 100
+      + Math.abs(row.temperature_c - features.temperature_c) / temperatureRange
+      + Math.abs(row.humidity - features.humidity) / humidityRange
+      + Math.min(hourDifference, 24 - hourDifference) / 12
+      + Math.min(monthDifference, 12 - monthDifference) / 6;
+    return { row, score };
+  }).sort((left, right) => left.score - right.score).slice(0, 31);
 
-  const scores = { Low: 0, Medium: 0, High: 0 };
-  neighbors.forEach((neighbor) => {
-    scores[neighbor.risk] += 1 / (neighbor.distance + 0.001);
+  let aqi = 0;
+  let pm25 = 0;
+  let pm10 = 0;
+  let weightTotal = 0;
+  neighbors.forEach(({ row, score }) => {
+    const weight = 1 / (1 + score);
+    aqi += row.aqi_us_epa_index * weight;
+    pm25 += row.pm2_5 * weight;
+    pm10 += row.pm10 * weight;
+    weightTotal += weight;
   });
-  return Object.entries(scores).sort((left, right) => right[1] - left[1])[0][0];
+  return {
+    aqi: aqi / weightTotal,
+    pm25: pm25 / weightTotal,
+    pm10: pm10 / weightTotal,
+    neighborCount: neighbors.length
+  };
 }
 
-async function fetchLivePrediction(position) {
-  activeLivePosition = position;
-  const { latitude, longitude } = position.coords;
-  const liveStatus = document.querySelector('#live-status');
-  liveStatus.textContent = 'Retrieving live air-quality and weather data...';
+function renderPredictionDetails({ label, prediction, temperature, humidity, risk, updatedAt, summary, method }) {
+  document.querySelector('#prediction-location').textContent = label;
+  document.querySelector('#prediction-summary').textContent = summary;
+  document.querySelector('#detail-aqi').textContent = `${prediction.aqi.toFixed(1)} / 6`;
+  document.querySelector('#detail-aqi-band').textContent = epiBand(Math.round(prediction.aqi));
+  const riskElement = document.querySelector('#detail-risk');
+  riskElement.textContent = risk;
+  riskElement.dataset.risk = risk.toLowerCase();
+  document.querySelector('#detail-pm25').textContent = prediction.pm25.toFixed(1);
+  document.querySelector('#detail-pm10').textContent = prediction.pm10.toFixed(1);
+  document.querySelector('#detail-temperature').textContent = `${temperature.toFixed(1)}°C`;
+  document.querySelector('#detail-humidity').textContent = `${humidity.toFixed(0)}%`;
+  document.querySelector('#prediction-method').textContent = method;
+  document.querySelector('#prediction-updated').textContent = `Updated ${updatedAt.toLocaleString()}`;
+}
 
-  const airUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=pm10,pm2_5,us_aqi,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone&timezone=auto`;
+async function predictAtCoordinates({ latitude, longitude, label, statusElement }) {
+  statusElement.textContent = 'Retrieving current weather and matching historical observations...';
   const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m&timezone=auto`;
-  const aqicnToken = import.meta.env.VITE_AQICN_TOKEN;
-  const stationUrl = aqicnToken
-    ? `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${aqicnToken}`
-    : null;
-
-  const [airResponse, weatherResponse, stationResponse] = await Promise.all([
-    fetch(airUrl),
-    fetch(weatherUrl),
-    stationUrl ? fetch(stationUrl).catch(() => null) : Promise.resolve(null)
-  ]);
-  if (!airResponse.ok || !weatherResponse.ok) throw new Error('Live weather provider unavailable');
-
-  const [airData, weatherData, stationData] = await Promise.all([
-    airResponse.json(),
-    weatherResponse.json(),
-    stationResponse?.ok ? stationResponse.json() : Promise.resolve(null)
-  ]);
-  const currentAir = airData.current;
+  const weatherResponse = await fetch(weatherUrl);
+  if (!weatherResponse.ok) throw new Error('Live weather provider unavailable');
+  const weatherData = await weatherResponse.json();
   const currentWeather = weatherData.current;
-  const station = stationData?.status === 'ok' ? stationData.data : null;
-  const stationAqi = Number(station?.aqi);
-  const pm25 = Number(station?.iaqi?.pm25?.v ?? currentAir.pm2_5);
-  const pm10 = Number(station?.iaqi?.pm10?.v ?? currentAir.pm10);
-  const rawAqi = Number.isFinite(stationAqi) ? stationAqi : Number(currentAir.us_aqi);
-  const aqiSource = station ? 'Nearest monitoring station' : 'Open-Meteo grid model';
-  const stationName = station?.city?.name ? ` · ${station.city.name}` : '';
   const temperature = Number(currentWeather.temperature_2m);
   const humidity = Number(currentWeather.relative_humidity_2m);
+  if (!Number.isFinite(temperature) || !Number.isFinite(humidity)) {
+    throw new Error('Current weather data is incomplete');
+  }
   const now = new Date();
-  const features = {
-    pm2_5: pm25,
-    pm10,
+  const prediction = predictCurrentAqi({
+    latitude,
+    longitude,
     temperature_c: temperature,
     humidity,
-    aqi_us_epa_index: usAqiCategory(rawAqi),
     hour: now.getHours(),
     month: now.getMonth() + 1
-  };
-  const risk = predictLiveRisk(features);
+  });
+  const predictedIndex = prediction.aqi;
+  const riskIndex = Math.max(1, Math.min(6, Math.round(predictedIndex)));
+  const risk = riskFromAqiIndex(predictedIndex);
   const color = riskColors[risk];
+  const summary = `Current weather near ${label} matched against the supplied historical observations.`;
 
-  document.querySelector('#pm25-value').textContent = Number.isFinite(pm25) ? pm25.toFixed(1) : '—';
-  document.querySelector('#pm25-detail').textContent = 'µg/m³ live PM2.5';
-  document.querySelector('#aqi-label').textContent = 'Live US AQI';
-  document.querySelector('#aqi-value').textContent = Number.isFinite(rawAqi) ? rawAqi.toFixed(0) : '—';
-  document.querySelector('#aqi-detail').textContent = `${aqiSource}${stationName} · ${risk} proxy`;
-  document.querySelector('#selected-value').textContent = 'Live location';
-  document.querySelector('#selected-detail').textContent = `${risk} proxy · ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  document.querySelector('#insight-title').textContent = `${risk} live respiratory-risk proxy`;
-  document.querySelector('#insight-copy').textContent = `The weighted-neighbor model predicts ${risk.toLowerCase()} relative concern from live PM2.5 ${pm25.toFixed(1)} µg/m³, PM10 ${pm10.toFixed(1)} µg/m³, US AQI ${rawAqi.toFixed(0)}, ${temperature.toFixed(1)}°C and ${humidity.toFixed(0)}% humidity. This is non-clinical research output.`;
-  liveStatus.textContent = `Live prediction: ${risk} · ${aqiSource}${stationName} · Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  document.querySelector('#pm25-value').textContent = prediction.pm25.toFixed(1);
+  document.querySelector('#pm25-detail').textContent = 'µg/m³ historical estimate';
+  document.querySelector('#aqi-label').textContent = 'Estimated AQI category index';
+  document.querySelector('#aqi-value').textContent = predictedIndex.toFixed(1);
+  document.querySelector('#aqi-detail').textContent = `${epiBand(riskIndex)} · weather-based estimate`;
+  document.querySelector('#selected-value').textContent = label;
+  document.querySelector('#selected-detail').textContent = `${risk} proxy · weather-based estimate`;
+  document.querySelector('#insight-title').textContent = `${risk} estimated respiratory-risk proxy`;
+  document.querySelector('#insight-copy').textContent = `A weighted estimate from nearby historical observations matched to current weather (${temperature.toFixed(1)}°C, ${humidity.toFixed(0)}% humidity) and time. Estimated AQI category index ${predictedIndex.toFixed(1)}, PM2.5 ${prediction.pm25.toFixed(1)} µg/m³ and PM10 ${prediction.pm10.toFixed(1)} µg/m³. This is not a live air-quality measurement or a medical assessment.`;
+  statusElement.textContent = `Weather-based estimate: AQI category ${predictedIndex.toFixed(1)} · ${risk} proxy · Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  renderPredictionDetails({
+    label,
+    prediction,
+    temperature,
+    humidity,
+    risk,
+    updatedAt: now,
+    summary,
+    method: `Matched ${prediction.neighborCount} historical observations using geographic distance, current temperature and humidity, hour, and month. AQI is estimated on the source dataset's 1–6 category scale; it is not a measured live AQI value.`
+  });
 
   map.setView([latitude, longitude], 11, { animate: true });
   if (liveMarker) markerLayer.removeLayer(liveMarker);
@@ -329,9 +377,19 @@ async function fetchLivePrediction(position) {
       iconAnchor: [12, 12]
     })
   }).bindPopup(`
-    <div class="popup"><strong>Live location</strong><span>${now.toLocaleString()}</span><div><b>${risk}</b> ML respiratory-risk proxy</div><small>PM2.5 ${pm25.toFixed(1)} · PM10 ${pm10.toFixed(1)} · AQI ${rawAqi.toFixed(0)}</small></div>
+    <div class="popup"><strong>${escapeHtml(label)}</strong><span>Weather-based historical estimate · ${now.toLocaleString()}</span><div><b>${risk}</b> risk proxy · AQI category ${predictedIndex.toFixed(1)}</div><small>Estimated PM2.5 ${prediction.pm25.toFixed(1)} · PM10 ${prediction.pm10.toFixed(1)}</small></div>
   `).addTo(markerLayer);
   liveMarker.openPopup();
+}
+
+function fetchLivePrediction(position) {
+  activeLivePosition = position;
+  return predictAtCoordinates({
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+    label: 'My current location',
+    statusElement: document.querySelector('#live-status')
+  });
 }
 
 function locateAndPredict() {
@@ -366,6 +424,28 @@ document.querySelector('#live-location').addEventListener('click', () => {
   }, 15 * 60 * 1000);
 });
 
+document.querySelector('#check-other-location').addEventListener('click', () => {
+  const selectedLocation = document.querySelector('#other-location-select').value;
+  const location = monitoredLocations.get(selectedLocation);
+  const statusElement = document.querySelector('#other-location-status');
+  if (!location) {
+    statusElement.textContent = 'Choose a monitored location first.';
+    return;
+  }
+  if (liveRefreshTimer) clearInterval(liveRefreshTimer);
+  liveRefreshTimer = null;
+  activeLivePosition = null;
+  predictAtCoordinates({
+    latitude: location.latitude,
+    longitude: location.longitude,
+    label: `${location.location}, ${location.region}`,
+    statusElement
+  }).catch((error) => {
+    statusElement.textContent = 'Unable to retrieve current weather for this location.';
+    console.error(error);
+  });
+});
+
 function haversineKm(first, second) {
   const radians = (degrees) => degrees * Math.PI / 180;
   const latitudeDistance = radians(second.latitude - first.latitude);
@@ -393,6 +473,10 @@ async function predictForSearchedPlace() {
   const status = document.querySelector('#place-prediction-status');
   if (!query) {
     status.textContent = 'Enter a city or place name first';
+    return;
+  }
+  if (!allRows.length) {
+    status.textContent = 'Historical observations are still loading';
     return;
   }
 
@@ -430,25 +514,25 @@ async function predictForSearchedPlace() {
 
   let weightedAqi = 0;
   let weightedPm25 = 0;
+  let weightedPm10 = 0;
+  let weightedTemperature = 0;
+  let weightedHumidity = 0;
   let weightTotal = 0;
   neighbors.forEach(({ row, score }) => {
     const weight = 1 / (1 + score);
     weightedAqi += row.aqi_us_epa_index * weight;
     weightedPm25 += row.pm2_5 * weight;
+    weightedPm10 += row.pm10 * weight;
+    weightedTemperature += row.temperature_c * weight;
+    weightedHumidity += row.humidity * weight;
     weightTotal += weight;
   });
   const estimatedIndex = weightedAqi / weightTotal;
   const estimatedPm25 = weightedPm25 / weightTotal;
-  const closest = neighbors[0].row;
-  const risk = predictLiveRisk({
-    pm2_5: estimatedPm25,
-    pm10: closest.pm10,
-    temperature_c: closest.temperature_c,
-    humidity: closest.humidity,
-    aqi_us_epa_index: estimatedIndex,
-    hour: now.getHours(),
-    month: now.getMonth() + 1
-  });
+  const estimatedPm10 = weightedPm10 / weightTotal;
+  const estimatedTemperature = weightedTemperature / weightTotal;
+  const estimatedHumidity = weightedHumidity / weightTotal;
+  const risk = riskFromAqiIndex(estimatedIndex);
   const color = riskColors[risk];
 
   map.setView([latitude, longitude], exactLocation ? 10 : 11, { animate: true });
@@ -462,7 +546,7 @@ async function predictForSearchedPlace() {
       iconAnchor: [12, 12]
     })
   }).bindPopup(`
-    <div class="popup"><strong>${escapeHtml(displayName)}</strong><span>Historical-data estimate</span><div><b>${escapeHtml(risk)}</b> risk proxy · EPA index ${estimatedIndex.toFixed(1)}</div><small>Estimated PM2.5 ${estimatedPm25.toFixed(1)} µg/m³</small></div>
+    <div class="popup"><strong>${escapeHtml(displayName)}</strong><span>Historical-data estimate</span><div><b>${escapeHtml(risk)}</b> risk proxy · AQI category ${estimatedIndex.toFixed(1)}</div><small>Estimated PM2.5 ${estimatedPm25.toFixed(1)} · PM10 ${estimatedPm10.toFixed(1)} µg/m³</small></div>
   `).addTo(markerLayer);
   liveMarker.openPopup();
 
@@ -474,8 +558,18 @@ async function predictForSearchedPlace() {
   document.querySelector('#selected-value').textContent = displayName.split(',')[0];
   document.querySelector('#selected-detail').textContent = `${risk} proxy · historical estimate`;
   document.querySelector('#insight-title').textContent = `${risk} estimated respiratory-risk proxy`;
-  document.querySelector('#insight-copy').textContent = `This is a weighted estimate from the project's 2023 observations near ${displayName}. It estimates EPA AQI index ${estimatedIndex.toFixed(1)} and PM2.5 ${estimatedPm25.toFixed(1)} µg/m³ using place distance, hour and month. It is not a current measured AQI.`;
+  document.querySelector('#insight-copy').textContent = `This is a weighted estimate from the project's 2023 observations near ${displayName}. It estimates AQI category ${estimatedIndex.toFixed(1)}, PM2.5 ${estimatedPm25.toFixed(1)} µg/m³ and PM10 ${estimatedPm10.toFixed(1)} µg/m³ using place distance, hour and month. It is not a current measured AQI.`;
   status.textContent = `Estimated AQI index ${estimatedIndex.toFixed(1)} · ${risk} proxy · historical data only`;
+  renderPredictionDetails({
+    label: displayName,
+    prediction: { aqi: estimatedIndex, pm25: estimatedPm25, pm10: estimatedPm10, neighborCount: neighbors.length },
+    temperature: estimatedTemperature,
+    humidity: estimatedHumidity,
+    risk,
+    updatedAt: now,
+    summary: `Historical estimate near ${displayName}; current weather is not fetched for place-search predictions.`,
+    method: `Weighted estimate from ${neighbors.length} nearby 2023 observations, matched by geographic distance, hour, and month. Temperature and humidity shown are weighted historical conditions, not current weather. AQI uses the source dataset's 1–6 category scale.`
+  });
 }
 
 document.querySelector('#predict-place').addEventListener('click', () => {
@@ -492,6 +586,34 @@ fetch(DATA_URL).then((response) => {
   allRows = parseCsv(text);
   const locations = [...new Set(allRows.map((row) => row.location))].sort();
   document.querySelector('#location-filter').innerHTML += locations.map((location) => `<option value="${location}">${location}</option>`).join('');
+  const otherLocationSelect = document.querySelector('#other-location-select');
+  otherLocationSelect.replaceChildren();
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select a monitored location';
+  otherLocationSelect.append(placeholder);
+  allRows.forEach((row) => {
+    if (!Number.isFinite(row.latitude) || !Number.isFinite(row.longitude)) return;
+    const key = JSON.stringify([row.location, row.region]);
+    if (!monitoredLocations.has(key)) {
+      monitoredLocations.set(key, {
+        location: row.location,
+        region: row.region,
+        latitude: row.latitude,
+        longitude: row.longitude
+      });
+    }
+  });
+  [...monitoredLocations.entries()]
+    .sort((left, right) => left[1].location.localeCompare(right[1].location) || left[1].region.localeCompare(right[1].region))
+    .forEach(([key, location]) => {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = `${location.location}, ${location.region}`;
+      otherLocationSelect.append(option);
+    });
+  otherLocationSelect.disabled = false;
+  document.querySelector('#check-other-location').disabled = false;
   const coordinates = allRows.filter((row) => Number.isFinite(row.latitude) && Number.isFinite(row.longitude))
     .map((row) => [row.latitude, row.longitude]);
   if (coordinates.length) map.fitBounds(L.latLngBounds(coordinates), { padding: [30, 30] });
